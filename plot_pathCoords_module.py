@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jan 29 15:15:30 2020
-Python Version 2.7
+Python Version 2.7.14 
 
 New version of plot_pathCoords2
 New in this version: wrapped into a function so it can be used as a module
+Changed how target coordinates are calculated so it ends as soon as mouse reaches target
+Changed filename to int
 
 @author: Kelly
 """
@@ -13,12 +15,13 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg #for plotting the image
 import numpy as np #for the array
 import pandas as pd
+from matplotlib import cm
 
 #variables to change each time
-experiment = '06Sept' #Options: pilot, 23May, 08July, 06Sept, 07Oct
-trial = ' 86'  #trial number, add space before double digits
+experiment = '23May' #Options: pilot, 23May, 08July, 06Sept, 07Oct
+trial = 9  #trial number on excel file
 
-def plot_path_coords(experiment, trial, plot, calculations):
+def plot_path_coords(experiment, trial, plot, calc):
         
     #sets path of folder with raw trial data and times
     def set_experiment_path(experiment):
@@ -36,7 +39,12 @@ def plot_path_coords(experiment, trial, plot, calculations):
     
     #gets raw trial coordinates from ethovision
     def read_excel(trial):
-        df = pd.read_excel(set_experiment_path(experiment) + trial + '.xlsx', header=None, na_values=['-'])
+        #adjusts filename to have correct number of spaces
+        if trial < 10: filename = "  "+str(trial)
+        elif trial <100: filename = " "+str(trial)
+        else: filename = str(trial)
+        
+        df = pd.read_excel(set_experiment_path(experiment) + filename + '.xlsx', header=None, na_values=['-'])
         data_coords = np.asarray(df)
         return data_coords
     data_coords = read_excel(trial)
@@ -62,6 +70,7 @@ def plot_path_coords(experiment, trial, plot, calculations):
         if entrance == u'NW': background = background_path+'BKGDimage-pilot4.png'
         return background
     
+    #manually sets food target coordinates based on experiment
     def set_target():
         entrance = data_coords[33,1]
         trial_condition = data_coords[34,1]
@@ -155,13 +164,15 @@ def plot_path_coords(experiment, trial, plot, calculations):
     #find index when mouse is in a particular x y location
     def find_timepoint(x,y, array):
         array = np.array(array, dtype=np.float64)
-        radius = 5
+        radius = 5 #change this radius if you want the target to be bigger or smaller, normally 5
         time_in_range = ((array >= [x-radius, y-radius]) & (array <= [x+radius, y+radius])).all(axis=1)
-        timepoint = np.around(np.median(np.where(abs(time_in_range)==True)[0]))#gets median value of timepoint range, then rounds so it has no decimals
-    #    timepoint = np.around(np.where(abs(time_in_range)==True)[0])
-        if np.isnan(timepoint): timepoint = 0. #turns nan value to zero
+        timepoint = np.around(np.where(abs(time_in_range)==True)[0])
+        if timepoint.size == 0: 
+            timepoint = 0. #turns nan value to zero
+            print("WARNING target never reached")
+        else: timepoint = timepoint[0]
         return timepoint
-    
+
     #automatically detect start and end points without excel
     def get_coords_auto():
         idx_start = 39
@@ -170,10 +181,18 @@ def plot_path_coords(experiment, trial, plot, calculations):
         else: idx_end = int(39. + len(np.array(data_coords[39:,0], dtype=np.float64)))
         
         #gets nose point coordinates. To get center point, use 2 & 3 insead of 4 & 5
-        x = np.array(data_coords[idx_start:idx_end,2], dtype=np.float64)
-        y = np.array(data_coords[idx_start:idx_end,3], dtype=np.float64)
+        x = np.array(data_coords[idx_start:idx_end,4], dtype=np.float64)
+        y = np.array(data_coords[idx_start:idx_end,5], dtype=np.float64)
         return x,y, idx_end
     idx_end = get_coords_auto()[2]
+    
+    #gets return trajectory coords. needs index calculation from get_coords_auto
+    def get_coords_return():
+        idx_last = int(39. + len(np.array(data_coords[39:,0], dtype=np.float64)))
+        
+        x = np.array(data_coords[idx_end:idx_last,4], dtype=np.float64)
+        y = np.array(data_coords[idx_end:idx_last,5], dtype=np.float64)
+        return x,y
     
     def plot_coordinates():
         
@@ -183,10 +202,18 @@ def plot_path_coords(experiment, trial, plot, calculations):
         img = mpimg.imread(set_background_image())
         ax.imshow(img, extent=[-97, 97, -73, 73]) #plot image to match ethovision coordinates
         
-        #plot return path
-    #    ax.plot(get_coords()[2],get_coords()[3], ls='-', color = 'k')
+        #collect variables
+        x = get_coords_auto()[0]
+        y = get_coords_auto()[1]
+        
         #plot auto path
-        ax.plot(get_coords_auto()[0],get_coords_auto()[1], ls='-', color = 'green')
+        ax.plot(x, y, ls='-', color = 'red')
+        #plot return path
+        ax.plot(get_coords_return()[0],get_coords_return()[1], ls='-', color = 'k')
+        
+        #plot path with colours
+#        N = np.linspace(0, 10, np.size(y))
+#        ax.scatter(x, y, s=1.5, c = N, cmap=cm.jet_r, edgecolor='none')
         
         #annotate image
         target = plt.Circle((set_target()), 2.5, color='g')
@@ -200,7 +227,7 @@ def plot_path_coords(experiment, trial, plot, calculations):
         ax.set_xticks([])
         ax.set_yticks([])
         
-    #    plt.savefig('M'+ mouse + '_' + trial_condition + '.png', dpi=600, bbox_inches='tight', pad_inches = 0)
+#        plt.savefig('M'+ mouse + '_' + trial_condition + '.png', dpi=600, bbox_inches='tight', pad_inches = 0)
         plt.show()
     
     if plot == True:    
@@ -218,15 +245,16 @@ def plot_path_coords(experiment, trial, plot, calculations):
         return speed
     speed = calc_speed(distance,39,idx_end)
     
-    if calculations == True:
+    if calc == True:
         #report the data
         print(experiment + ' Mouse ' + mouse + ' Trial ' + trial_condition)
         print("Distance is "+str(distance) + ' cm')
         print("Speed is "+str(speed)+' cm/s')
+    return distance, speed, mouse, trial_condition
     
     
 def main():
-    plot_path_coords(experiment, trial, plot = True, calculations = True)
+    plot_path_coords(experiment, trial, plot = True, calc = True)
  
 if __name__ == '__main__': #only runs this function if the script top level AKA is running by itself 
     main()
