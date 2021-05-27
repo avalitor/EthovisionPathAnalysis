@@ -7,6 +7,7 @@ New version of plot_pathCoords2
 New in this version: wrapped into a function so it can be used as a module
 Changed how target coordinates are calculated so it ends as soon as mouse reaches target
 Changed filename to int
+Improved some comment explanations
 
 @author: Kelly
 """
@@ -18,8 +19,8 @@ import pandas as pd
 from matplotlib import cm
 
 #variables to change each time
-experiment = '23May' #Options: pilot, 23May, 08July, 06Sept, 07Oct
-trial = 9  #trial number on excel file
+experiment = '08July' #Options: pilot, 23May, 08July, 06Sept, 07Oct
+trial = 146  #trial number on excel file
 
 def plot_path_coords(experiment, trial, plot, calc):
         
@@ -35,6 +36,8 @@ def plot_path_coords(experiment, trial, plot, calc):
             raw_data_path = 'Raw Trial Data\\2019-09-06_Raw Trial Data\Raw data-Hidden Food Maze-06Sept2019-Trial   '
         if experiment == '07Oct':
             raw_data_path = 'Raw Trial Data\\2019-10-07_Raw Trial Data\Raw data-Hidden Food Maze-07Oct2019-Trial   '
+        if experiment == '11Dec':
+            raw_data_path = 'Raw Trial Data\\2019-12-11_Raw Trial Data\Raw data-Hidden Food Maze-11Dec2019-Trial   '
         return raw_data_path
     
     #gets raw trial coordinates from ethovision
@@ -116,6 +119,7 @@ def plot_path_coords(experiment, trial, plot, calc):
                     target_coords = 11.07, -30.48
         return target_coords
     
+    #sets the rotationally equivalent location of the target, only use during rotation trials
     def set_reverse_target():
         entrance = data_coords[33,1]
         trial_condition = data_coords[34,1]
@@ -250,6 +254,8 @@ def plot_path_coords(experiment, trial, plot, calc):
         print(experiment + ' Mouse ' + mouse + ' Trial ' + trial_condition)
         print("Distance is "+str(distance) + ' cm')
         print("Speed is "+str(speed)+' cm/s')
+        print(str(idx_end))
+        
     return distance, speed, mouse, trial_condition
     
     
