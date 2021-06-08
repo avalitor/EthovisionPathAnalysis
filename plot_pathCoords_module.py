@@ -19,8 +19,8 @@ import pandas as pd
 from matplotlib import cm
 
 #variables to change each time
-experiment = '08July' #Options: pilot, 23May, 08July, 06Sept, 07Oct
-trial = 146  #trial number on excel file
+experiment = '26May_21' #Options: pilot, 23May, 08July, 06Sept, 07Oct, 11Dec, 08Mar_21, 06May_21, 26May_21
+trial = 72  #trial number on excel file
 
 def plot_path_coords(experiment, trial, plot, calc):
         
@@ -38,6 +38,13 @@ def plot_path_coords(experiment, trial, plot, calc):
             raw_data_path = 'Raw Trial Data\\2019-10-07_Raw Trial Data\Raw data-Hidden Food Maze-07Oct2019-Trial   '
         if experiment == '11Dec':
             raw_data_path = 'Raw Trial Data\\2019-12-11_Raw Trial Data\Raw data-Hidden Food Maze-11Dec2019-Trial   '
+        if experiment == '08Mar_21':
+            raw_data_path = 'Raw Trial Data\\2021-03-08_Raw Trial Data\Raw data-Hidden Food Maze-08Mar2021-Trial   '
+        if experiment == '06May_21':
+            raw_data_path = 'Raw Trial Data\\2021-05-06_Raw Trial Data\Raw data-Hidden Food Maze-06May2021-Trial   '
+        if experiment == '26May_21':
+            raw_data_path = 'Raw Trial Data\\2021-05-26_Raw Trial Data\Raw data-Hidden Food Maze-26May2021-Trial   '
+         
         return raw_data_path
     
     #gets raw trial coordinates from ethovision
@@ -47,7 +54,10 @@ def plot_path_coords(experiment, trial, plot, calc):
         elif trial <100: filename = " "+str(trial)
         else: filename = str(trial)
         
-        df = pd.read_excel(set_experiment_path(experiment) + filename + '.xlsx', header=None, na_values=['-'])
+        if experiment.endswith('21') is True: skip = range(30, 32) #accomadates version change in ethovision file
+        else: skip = 0
+        
+        df = pd.read_excel(set_experiment_path(experiment) + filename + '.xlsx', header=None, skiprows=skip, na_values=['-'])
         data_coords = np.asarray(df)
         return data_coords
     data_coords = read_excel(trial)
@@ -71,6 +81,10 @@ def plot_path_coords(experiment, trial, plot, calc):
         if entrance == u'SE': background = background_path+'BKGDimage-pilot2.png'
         if entrance == u'NE': background = background_path+'BKGDimage-pilot3.png'
         if entrance == u'NW': background = background_path+'BKGDimage-pilot4.png'
+        if experiment == '11Dec': background = background_path+'BKGDimage-localCues.png'
+        if experiment == '08Mar_21': background = background_path+'BKGDimage-localCues_clear.png'
+        if experiment == '06May_21': background = background_path+'BKGDimage-localCues_Letter.png'
+        if experiment == '26May_21': background = background_path+'BKGDimage-localCues_LetterTex.png'
         return background
     
     #manually sets food target coordinates based on experiment
@@ -117,6 +131,8 @@ def plot_path_coords(experiment, trial, plot, calc):
                     target_coords = -21.68, -5.61
                 if entrance == u'NW':
                     target_coords = 11.07, -30.48
+        elif experiment == '11Dec': target_coords = 2.88, 27.45
+        elif experiment == '08Mar_21' or experiment == '06May_21' or experiment == '26May_21': target_coords = 24.47, 21.80
         return target_coords
     
     #sets the rotationally equivalent location of the target, only use during rotation trials
@@ -163,6 +179,8 @@ def plot_path_coords(experiment, trial, plot, calc):
                     reverse_target_coords = 2.88, 27.45
                 if entrance == u'NW':
                     reverse_target_coords = -21.68, -5.61 
+            elif experiment == '11Dec': reverse_target_coords = 11.07, -30.48
+            elif experiment == '08Mar_21' or experiment == '06May_21' or experiment == '26May_21': reverse_target_coords = -19.61, -16.63
         return reverse_target_coords
     
     #find index when mouse is in a particular x y location
@@ -205,6 +223,8 @@ def plot_path_coords(experiment, trial, plot, calc):
         #import image
         img = mpimg.imread(set_background_image())
         ax.imshow(img, extent=[-97, 97, -73, 73]) #plot image to match ethovision coordinates
+        if experiment == '11Dec': ax.imshow(img, extent=[-129.58, 129.58, -73.03, 73.03])
+        if experiment == '08Mar_21' or experiment == '06May_21' or experiment == '26May_21': ax.imshow(img, extent=[-151.06, 150.43, -84.23, 84.86])
         
         #collect variables
         x = get_coords_auto()[0]
@@ -213,7 +233,7 @@ def plot_path_coords(experiment, trial, plot, calc):
         #plot auto path
         ax.plot(x, y, ls='-', color = 'red')
         #plot return path
-        ax.plot(get_coords_return()[0],get_coords_return()[1], ls='-', color = 'k')
+#        ax.plot(get_coords_return()[0],get_coords_return()[1], ls='-', color = 'k')
         
         #plot path with colours
 #        N = np.linspace(0, 10, np.size(y))
@@ -249,14 +269,20 @@ def plot_path_coords(experiment, trial, plot, calc):
         return speed
     speed = calc_speed(distance,39,idx_end)
     
+    def calc_latency():
+        latency = data_coords[idx_end-1,1]
+        return latency
+    latency = calc_latency()
+    
     if calc == True:
         #report the data
         print(experiment + ' Mouse ' + mouse + ' Trial ' + trial_condition)
         print("Distance is "+str(distance) + ' cm')
         print("Speed is "+str(speed)+' cm/s')
-        print(str(idx_end))
+        print("index end is " + str(idx_end))
+        print("Latency is "+str(latency)+' s')
         
-    return distance, speed, mouse, trial_condition
+    return distance, speed, mouse, trial_condition, latency
     
     
 def main():
